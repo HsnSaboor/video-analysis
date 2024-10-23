@@ -6,8 +6,6 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import io
 
-import re
-
 def extract_data(content):
     # Example regex patterns; adjust them based on your actual content structure
     views_match = re.search(r'(\d[\d,]*) views', content)  # Extract numeric views
