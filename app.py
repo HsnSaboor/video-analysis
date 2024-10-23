@@ -6,22 +6,22 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import io
 
+import re
+
 def extract_data(content):
-    # Example regex patterns; adjust them based on your actual content structure
     views_match = re.search(r'(\d[\d,]*) views', content)  # Extract numeric views
     likes_match = re.search(r'(\d[\d,]*) likes', content)  # Extract numeric likes
-    comments_match = re.search(r'(\d[\d,]*) comments', content)  # Extract numeric comments
+    comments_match = re.findall(r'(?<=\n).*?(?=\n)', content)  # Extract all comments as a list
     heatmap_match = re.search(r'## Heatmap SVG\n(.*?)\n\n', content, re.DOTALL)  # Adjust for multi-line SVG
 
-    # Extract views, likes, comments
+    # Extract views, likes
     views = views_match.group(1).replace(',', '') if views_match else '0'
     likes = likes_match.group(1).replace(',', '') if likes_match else '0'
-    comments = comments_match.group(1) if comments_match else '0'
     
     heatmap_svg = heatmap_match.group(1) if heatmap_match else None
 
     # Convert extracted values to integers
-    return int(views), int(likes), int(comments), heatmap_svg
+    return int(views), int(likes), comments_match, heatmap_svg
 
 
 
