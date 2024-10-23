@@ -108,7 +108,7 @@ def main():
     st.title("Video Analysis Tool")
     st.sidebar.title("Navigation")
     
-    uploaded_file = st.file_uploader("Upload your file", type=["txt", "csv"])
+    uploaded_file = st.file_uploader("Upload your file", type=["txt", "csv" , "md"])
     
     if uploaded_file is not None:
         content = uploaded_file.read().decode("utf-8")
