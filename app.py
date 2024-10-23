@@ -46,17 +46,29 @@ def normalize_ratios(view_to_comment_ratio, views_to_like_ratio, comment_to_like
 
     return score_view_to_comment, score_views_to_like, score_comment_to_like
 
+
 def extract_attention_data(svg_content):
+    # Check if svg_content is None
+    if svg_content is None:
+        return []  # or raise an Exception, or return a default value
+
     attention_data = []
-    root = ET.fromstring(svg_content)
-    
-    for element in root.iter():
-        if element.tag in ['{http://www.w3.org/2000/svg}circle', '{http://www.w3.org/2000/svg}rect']:
-            x = float(element.get('cx', 0)) if 'cx' in element.attrib else float(element.get('x', 0))
-            y = float(element.get('cy', 0)) if 'cy' in element.attrib else float(element.get('y', 0))
-            attention_data.append((x, y))
+    try:
+        # Use the ET.fromstring method to parse the SVG content
+        root = ET.fromstring(svg_content)
+
+        for element in root.iter():
+            if element.tag in ['{http://www.w3.org/2000/svg}circle', '{http://www.w3.org/2000/svg}rect']:
+                attention_data.append({
+                    'tag': element.tag,
+                    'attributes': element.attrib,
+                })
+    except ET.ParseError as e:
+        print(f"Error parsing SVG content: {e}")
+        # Handle parse error appropriately
 
     return attention_data
+
 
 def plot_attention_graph(attention_data):
     if not attention_data:
@@ -96,10 +108,18 @@ def main():
     st.title("Video Analysis Tool")
     st.sidebar.title("Navigation")
     
-    uploaded_file = st.sidebar.file_uploader("Upload a Markdown file", type=["md"])
+     uploaded_file = st.file_uploader("Upload your file", type=["txt", "csv"])
     
     if uploaded_file is not None:
         content = uploaded_file.read().decode("utf-8")
+        views, likes, comments, heatmap_svg = extract_data(content)
+
+        # Only extract attention data if heatmap_svg is not None
+        if heatmap_svg:
+            attention_data = extract_attention_data(heatmap_svg)
+        else:
+            st.warning("No heatmap data available.")
+            attention_data = []  # or handle this case as needed
         
         views, likes, comments, heatmap_svg = extract_data(content)
         sentiments = perform_sentiment_analysis(comments)
