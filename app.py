@@ -6,23 +6,25 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import io
 
+import re
+
 def extract_data(content):
-    # Extract views
-    views_match = re.search(r'- \*\*Views:\*\* (.+)', content)
-    views = views_match.group(1) if views_match else "0"  # Default to "0" if not found
+    # Example regex patterns; adjust them based on your actual content structure
+    views_match = re.search(r'(\d[\d,]*) views', content)  # Extract numeric views
+    likes_match = re.search(r'(\d[\d,]*) likes', content)  # Extract numeric likes
+    comments_match = re.search(r'(\d[\d,]*) comments', content)  # Extract numeric comments
+    heatmap_match = re.search(r'## Heatmap SVG\n(.*?)\n\n', content, re.DOTALL)  # Adjust for multi-line SVG
 
-    # Extract likes
-    likes_match = re.search(r'- \*\*Likes:\*\* (.+)', content)
-    likes = likes_match.group(1) if likes_match else "0"  # Default to "0" if not found
+    # Extract views, likes, comments
+    views = views_match.group(1).replace(',', '') if views_match else '0'
+    likes = likes_match.group(1).replace(',', '') if likes_match else '0'
+    comments = comments_match.group(1) if comments_match else '0'
+    
+    heatmap_svg = heatmap_match.group(1) if heatmap_match else None
 
-    # Extract comments
-    comments = re.findall(r'- \*\*(.+?)\*\*: (.+)', content)
+    # Convert extracted values to integers
+    return int(views), int(likes), int(comments), heatmap_svg
 
-    # Extract heatmap SVG
-    heatmap_match = re.search(r'## Heatmap SVG\n(.*?)\n\n', content, re.DOTALL)
-    heatmap_svg = heatmap_match.group(1) if heatmap_match else None  # Default to None if not found
-
-    return int(views.replace(',', '')), int(likes.replace(',', '')), comments, heatmap_svg
 
 
 def perform_sentiment_analysis(comments):
