@@ -4,12 +4,13 @@ from textblob import TextBlob
 import matplotlib.pyplot as plt
 import streamlit as st
 import xml.etree.ElementTree as ET
+import io
 
 def extract_data(content):
     views = re.search(r'- \*\*Views:\*\* (.+)', content).group(1)
     likes = re.search(r'- \*\*Likes:\*\* (.+)', content).group(1)
     comments = re.findall(r'- \*\*(.+?)\*\*: (.+)', content)
-    heatmap_svg = re.search(r'## Heatmap\n(.+)', content, re.DOTALL).group(1)
+    heatmap_svg = re.search(r'## Heatmap SVG\n(.*?)\n\n', content, re.DOTALL).group(1)
 
     return int(views.replace(',', '')), int(likes.replace(',', '')), comments, heatmap_svg
 
@@ -27,26 +28,18 @@ def calculate_ratios(views, likes, comments):
     return view_to_comment_ratio, views_to_like_ratio, comment_to_like_ratio
 
 def normalize_ratios(view_to_comment_ratio, views_to_like_ratio, comment_to_like_ratio):
-    # Define maximum expected values for normalization
-    max_view_to_comment_ratio = 100  # Example maximum value
-    max_views_to_like_ratio = 50      # Example maximum value
-    max_comment_to_like_ratio = 10     # Example maximum value
+    max_view_to_comment_ratio = 100
+    max_views_to_like_ratio = 50
+    max_comment_to_like_ratio = 10
 
-    # Normalize ratios to a score out of 10
     score_view_to_comment = min(view_to_comment_ratio / max_view_to_comment_ratio * 10, 10)
     score_views_to_like = min(views_to_like_ratio / max_views_to_like_ratio * 10, 10)
     score_comment_to_like = min(comment_to_like_ratio / max_comment_to_like_ratio * 10, 10)
 
     return score_view_to_comment, score_views_to_like, score_comment_to_like
 
-def analyze_heatmap(heatmap_svg):
-    attention_data = extract_attention_data(heatmap_svg)
-    return attention_data
-
 def extract_attention_data(svg_content):
     attention_data = []
-    
-    # Use regex or XML parsing to extract attention points
     root = ET.fromstring(svg_content)
     
     for element in root.iter():
@@ -59,19 +52,22 @@ def extract_attention_data(svg_content):
 
 def plot_attention_graph(attention_data):
     if not attention_data:
-        return None  # No data to plot
+        return None
 
     x_data, y_data = zip(*attention_data)
     plt.figure(figsize=(10, 5))
-    plt.plot(x_data, y_data, marker='o')
+    plt.scatter(x_data, y_data, marker='o', color='orange')
     plt.title('Attention Heatmap Analysis')
-    plt.xlabel('Duration (seconds)')
-    plt.ylabel('Attention')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
     plt.grid(True)
 
-    plt.tight_layout()
-    plt.savefig('attention_heatmap_analysis.png')
-    plt.close()  # Close the plot to free up memory
+    # Save to a BytesIO stream instead of a file
+    img_stream = io.BytesIO()
+    plt.savefig(img_stream, format='png')
+    plt.close()
+    img_stream.seek(0)  # Reset the stream to the beginning
+    return img_stream
 
 def plot_sentiment_analysis(sentiments):
     plt.figure(figsize=(10, 5))
@@ -80,15 +76,19 @@ def plot_sentiment_analysis(sentiments):
     plt.xlabel('Sentiment Score')
     plt.ylabel('Frequency')
     plt.grid(axis='y')
-    plt.tight_layout()
 
-    plt.savefig('sentiment_analysis_chart.png')
-    plt.close()  # Close the plot to free up memory
+    # Save to a BytesIO stream instead of a file
+    img_stream = io.BytesIO()
+    plt.savefig(img_stream, format='png')
+    plt.close()
+    img_stream.seek(0)  # Reset the stream to the beginning
+    return img_stream
 
 def main():
     st.title("Video Analysis Tool")
+    st.sidebar.title("Navigation")
     
-    uploaded_file = st.file_uploader("Upload a Markdown file", type=["md"])
+    uploaded_file = st.sidebar.file_uploader("Upload a Markdown file", type=["md"])
     
     if uploaded_file is not None:
         content = uploaded_file.read().decode("utf-8")
@@ -97,24 +97,27 @@ def main():
         sentiments = perform_sentiment_analysis(comments)
         ratios = calculate_ratios(views, likes, comments)
         normalized_scores = normalize_ratios(*ratios)
-        attention_data = analyze_heatmap(heatmap_svg)
+        attention_data = extract_attention_data(heatmap_svg)
 
         # Display results
-        st.write(f"**Views:** {views}")
-        st.write(f"**Likes:** {likes}")
-        st.write(f"**Comments Count:** {len(comments)}")
-        st.write(f"**View-to-Comment Ratio Score:** {normalized_scores[0]:.2f}/10")
-        st.write(f"**Views-to-Like Ratio Score:** {normalized_scores[1]:.2f}/10")
-        st.write(f"**Comment-to-Like Ratio Score:** {normalized_scores[2]:.2f}/10")
-        st.write(f"**Sentiment Mean:** {sum(sentiments) / len(sentiments) if sentiments else 0:.2f}")
+        st.header("Analysis Results")
+        st.metric("Views", views)
+        st.metric("Likes", likes)
+        st.metric("Comments Count", len(comments))
+        st.metric("View-to-Comment Ratio Score", f"{normalized_scores[0]:.2f}/10")
+        st.metric("Views-to-Like Ratio Score", f"{normalized_scores[1]:.2f}/10")
+        st.metric("Comment-to-Like Ratio Score", f"{normalized_scores[2]:.2f}/10")
+        st.metric("Sentiment Mean", f"{sum(sentiments) / len(sentiments) if sentiments else 0:.2f}")
 
         # Plot sentiment analysis
-        plot_sentiment_analysis(sentiments)
-        st.image('sentiment_analysis_chart.png')
+        st.subheader("Sentiment Analysis")
+        sentiment_img_stream = plot_sentiment_analysis(sentiments)
+        st.image(sentiment_img_stream, caption='Sentiment Analysis Histogram', use_column_width=True)
 
         # Plot attention graph
-        plot_attention_graph(attention_data)
-        st.image('attention_heatmap_analysis.png')
+        st.subheader("Attention Heatmap Analysis")
+        attention_img_stream = plot_attention_graph(attention_data)
+        st.image(attention_img_stream, caption='Attention Heatmap', use_column_width=True)
 
 if __name__ == "__main__":
     main()
