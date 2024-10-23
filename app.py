@@ -6,8 +6,6 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import io
 
-import re
-
 def extract_data(content):
     views_match = re.search(r'(\d[\d,]*) views', content)  # Extract numeric views
     likes_match = re.search(r'(\d[\d,]*) likes', content)  # Extract numeric likes
@@ -23,14 +21,13 @@ def extract_data(content):
     # Convert extracted values to integers
     return int(views), int(likes), comments_match, heatmap_svg
 
-
-
 def perform_sentiment_analysis(comments):
     sentiments = []
-    for author, comment in comments:
+    for comment in comments:
         analysis = TextBlob(comment)
-        sentiments.append(analysis.sentiment.polarity)
+        sentiments.append((comment, analysis.sentiment))  # Store comment with its sentiment
     return sentiments
+
 
 def calculate_ratios(views, likes, comments):
     view_to_comment_ratio = views / len(comments) if comments else 0
