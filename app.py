@@ -7,12 +7,23 @@ import xml.etree.ElementTree as ET
 import io
 
 def extract_data(content):
-    views = re.search(r'- \*\*Views:\*\* (.+)', content).group(1)
-    likes = re.search(r'- \*\*Likes:\*\* (.+)', content).group(1)
+    # Extract views
+    views_match = re.search(r'- \*\*Views:\*\* (.+)', content)
+    views = views_match.group(1) if views_match else "0"  # Default to "0" if not found
+
+    # Extract likes
+    likes_match = re.search(r'- \*\*Likes:\*\* (.+)', content)
+    likes = likes_match.group(1) if likes_match else "0"  # Default to "0" if not found
+
+    # Extract comments
     comments = re.findall(r'- \*\*(.+?)\*\*: (.+)', content)
-    heatmap_svg = re.search(r'## Heatmap SVG\n(.*?)\n\n', content, re.DOTALL).group(1)
+
+    # Extract heatmap SVG
+    heatmap_match = re.search(r'## Heatmap SVG\n(.*?)\n\n', content, re.DOTALL)
+    heatmap_svg = heatmap_match.group(1) if heatmap_match else None  # Default to None if not found
 
     return int(views.replace(',', '')), int(likes.replace(',', '')), comments, heatmap_svg
+
 
 def perform_sentiment_analysis(comments):
     sentiments = []
